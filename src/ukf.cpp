@@ -82,75 +82,7 @@ UKF::UKF() {
 
 UKF::~UKF() {}
 
-/**
- * @param {MeasurementPackage} meas_package The latest measurement data of
- * either radar or laser.
- */
-void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
-  /**
-  TODO:
 
-  Complete this function! Make sure you switch between lidar and radar
-  measurements.
-  */
-  
-  if(((meas_package.sensor_type_ == MeasurementPackage::RADAR) && (use_radar_)) || ((meas_package.sensor_type_ == MeasurementPackage::LASER) && (use_laser_)))
-  {
-  	if(!is_initialized_)
-  	{
-  			cout<<"Inside is_initialized"<<endl;
-  			x_ << 1,1,1,1,0.1;
-  			
-  			P_ << 0.15,0,0,0,0,
-  				  0,0.15,0,0,0,
-  				  0,0,1,0,0,
-  				  0,0,0,1,0,
-  				  0,0,0,0,1;
-  				  
-  			time_us_ = meas_package.timestamp_;
-  			
-  			if((meas_package.sensor_type_ == MeasurementPackage::LASER) && (use_laser_))
-  			{
-  				cout<<"Lidar initialization"<<endl;
-  				
-  				x_(0) = meas_package.raw_measurements_(0);
-  				x_(1) = meas_package.raw_measurements_(1);
-  				
-  				cout<<"Lidar initialization done"<<endl;
-			}
-			else if((meas_package.sensor_type_ == MeasurementPackage::RADAR) && (use_radar_))
-			{
-				cout<<"Radar initialization"<<endl;
-				float ro = meas_package.raw_measurements_(0);
-				float phi = meas_package.raw_measurements_(1);
-				float ro_dot =  meas_package.raw_measurements_(2);
-				
-				x_(0) = ro * cos(phi);
-				x_(1) = ro * sin(phi);
-			}
-			cout<<"Initialization done"<<endl;
-			is_initialized_ = true;
-			return;
-			
-	}
-	//Prediction
-	float dt = (meas_package.timestamp_ - time_us_) / 1000000.0;
-	time_us_ = meas_package.timestamp_;
-	
-	Prediction(dt);
-	
-	//Update
-	
-	if(meas_package.sensor_type_ == MeasurementPackage::LASER)
-	{
-		UpdateLidar(meas_package);
-	}
-	else if(meas_package.sensor_type_ == MeasurementPackage::RADAR)
-	{
-		UpdateRadar(meas_package);
-	}
-  }
-}
 
 /**
  * Predicts sigma points, the state, and the state covariance matrix.
@@ -166,8 +98,13 @@ void UKF::Prediction(double delta_t) {
   */
   //Creating augmented mean state
   cout<<"inside prediction"<<endl;
+  
   x_aug.head(5) = x_;
+  
+  		   
+  cout<<"2"<<endl;
   x_aug(5) = 0;
+  
   x_aug(6) = 0;
   cout<<"first part -1"<<endl;
   //Creating augmented covariance matrix
@@ -450,4 +387,78 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
   P_ = P_ - K * S * K.transpose();
 	
   
+}
+
+
+
+/**
+ * @param {MeasurementPackage} meas_package The latest measurement data of
+ * either radar or laser.
+ */
+void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
+  /**
+  TODO:
+
+  Complete this function! Make sure you switch between lidar and radar
+  measurements.
+  */
+  
+  if(((meas_package.sensor_type_ == MeasurementPackage::RADAR) && (use_radar_)) || ((meas_package.sensor_type_ == MeasurementPackage::LASER) && (use_laser_)))
+  {
+  	if(!is_initialized_)
+  	{
+  			cout<<"Inside is_initialized"<<endl;
+  			x_ << 1, 1, 1, 1, 0.1;
+			  	  
+  			
+  			P_ << 0.15,0,0,0,0,
+  				  0,0.15,0,0,0,
+  				  0,0,1,0,0,
+  				  0,0,0,1,0,
+  				  0,0,0,0,1;
+  				  
+  			
+  			time_us_ = meas_package.timestamp_;
+  			
+  			if((meas_package.sensor_type_ == MeasurementPackage::LASER) && (use_laser_))
+  			{
+  				cout<<"Lidar initialization"<<endl;
+  				
+  				x_(0) = meas_package.raw_measurements_(0);
+  				x_(1) = meas_package.raw_measurements_(1);
+  				
+  				cout<<"Lidar initialization done"<<endl;
+			}
+			else if((meas_package.sensor_type_ == MeasurementPackage::RADAR) && (use_radar_))
+			{
+				cout<<"Radar initialization"<<endl;
+				float ro = meas_package.raw_measurements_(0);
+				float phi = meas_package.raw_measurements_(1);
+				float ro_dot =  meas_package.raw_measurements_(2);
+				
+				x_(0) = ro * cos(phi);
+				x_(1) = ro * sin(phi);
+			}
+			cout<<"Initialization done"<<endl;
+			is_initialized_ = true;
+			return;
+			
+	}
+	//Prediction
+	float dt = (meas_package.timestamp_ - time_us_) / 1000000.0;
+	time_us_ = meas_package.timestamp_;
+	
+	Prediction(dt);
+	
+	//Update
+	
+	if(meas_package.sensor_type_ == MeasurementPackage::LASER)
+	{
+		UpdateLidar(meas_package);
+	}
+	else if(meas_package.sensor_type_ == MeasurementPackage::RADAR)
+	{
+		UpdateRadar(meas_package);
+	}
+  }
 }
