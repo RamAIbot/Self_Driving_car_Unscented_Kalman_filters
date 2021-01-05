@@ -97,22 +97,39 @@ void UKF::Prediction(double delta_t) {
   vector, x_. Predict sigma points, the state, and the state covariance matrix.
   */
   //Creating augmented mean state
-  cout<<"inside prediction"<<endl;
+  VectorXd x_aug = VectorXd(7);
+  MatrixXd P_aug = MatrixXd(7,7);
+  Xsig_pred_ = MatrixXd(n_x_, 2*n_aug_+1);
+  //Augmented sigma points matrix
+  MatrixXd Xsig_aug = MatrixXd(n_aug_, 2 * n_aug_ + 1);
+  weights_ = VectorXd(2*n_aug_+1);
+ 
+ 
+ weights_(0) = lambda_ / (lambda_ + n_aug_);
+ for(int i=1;i<=2*n_aug_;i++)
+ {
+ 	weights_(i) = 1 / (2 * (lambda_ + n_aug_));
+ }
+ 
+ 
+ 
   
+  cout<<"inside prediction"<<endl;
+  x_aug.fill(0.0);
   x_aug.head(5) = x_;
   
   		   
-  cout<<"2"<<endl;
+  //cout<<"2"<<endl;
   x_aug(5) = 0;
   
   x_aug(6) = 0;
-  cout<<"first part -1"<<endl;
+  
   //Creating augmented covariance matrix
   P_aug.fill(0.0);
   P_aug.topLeftCorner(n_x_,n_x_) = P_;
   P_aug(5,5) = std_a_ * std_a_;
   P_aug(6,6) = std_yawdd_ * std_yawdd_;
-  cout<<"first part -2"<<endl;
+  //cout<<"first part -2"<<endl;
   //Square root of P_aug matrix
   MatrixXd L = P_aug.llt().matrixL();
   
@@ -215,8 +232,8 @@ void UKF::UpdateLidar(MeasurementPackage meas_package) {
   VectorXd z = VectorXd(n_z_);
   
   z << meas_package.raw_measurements_(0),
-  	 meas_package.raw_measurements_(1);
- 
+  	   meas_package.raw_measurements_(1);
+ //cout<<"Lidar update 1"<<endl;
   for(int i=0;i< 2*n_aug_+1 ; i++)
   {
   	double p_x = Xsig_pred_(0,i);
@@ -230,7 +247,7 @@ void UKF::UpdateLidar(MeasurementPackage meas_package) {
 	
 	
   }
-  
+  //cout<<"Lidar update 2"<<endl;
   z_pred.fill(0.0);
   
   for(int i=0;i <2*n_aug_+1 ; i++)
@@ -241,19 +258,19 @@ void UKF::UpdateLidar(MeasurementPackage meas_package) {
   for(int i=0;i<2*n_aug_+1 ;i++)
   {
   	VectorXd z_diff = Zsig.col(i) - z_pred;
-  	while (z_diff(1)> M_PI) z_diff(1)-=2.*M_PI;
-    while (z_diff(1)<-M_PI) z_diff(1)+=2.*M_PI;
+//  	while (z_diff(1)> M_PI) z_diff(1)-=2.*M_PI;
+//    while (z_diff(1)<-M_PI) z_diff(1)+=2.*M_PI;
     
   	S = S + weights_(i) * z_diff * z_diff.transpose();
   }  
-  
+  //cout<<"Lidar update 3"<<endl;
   MatrixXd R = MatrixXd(n_z_, n_z_);
-  R << std_radr_*std_radr_ , 0 , 0,
-  		0 , std_radphi_*std_radphi_ , 0,
-  		0 , 0 , std_radrd_*std_radrd_;
+  R << std_laspx_*std_laspx_ , 0 ,
+  		0 , std_laspy_*std_laspy_ ;
+  		
   		
   S = S + R;
-  
+ // cout<<"Lidar update 3"<<endl;
   MatrixXd Tc = MatrixXd(n_x_,n_z_);
   
   Tc.fill(0.0);
@@ -278,8 +295,8 @@ void UKF::UpdateLidar(MeasurementPackage meas_package) {
   
   VectorXd z_diff = z - z_pred;
   
-  while (z_diff(1)> M_PI) z_diff(1)-=2.*M_PI;
-  while (z_diff(1)<-M_PI) z_diff(1)+=2.*M_PI;
+//  while (z_diff(1)> M_PI) z_diff(1)-=2.*M_PI;
+//  while (z_diff(1)<-M_PI) z_diff(1)+=2.*M_PI;
   
   x_ = x_ + K * z_diff;
   P_ = P_ - K * S * K.transpose();
@@ -413,10 +430,10 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
   			
   			P_ << 0.15,0,0,0,0,
   				  0,0.15,0,0,0,
-  				  0,0,1,0,0,
-  				  0,0,0,1,0,
-  				  0,0,0,0,1;
-  				  
+  				  0,0,0.3,0,0,
+  				  0,0,0,0.03,0,
+  				  0,0,0,0,0.3;
+  				
   			
   			time_us_ = meas_package.timestamp_;
   			
@@ -426,6 +443,15 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
   				
   				x_(0) = meas_package.raw_measurements_(0);
   				x_(1) = meas_package.raw_measurements_(1);
+  				x_(2) = 4;
+  				x_(3) = 0.4;
+  				x_(4) = 0.0;
+  				P_ << std_laspx_*std_laspx_, 0, 0, 0, 0,
+            		  0, std_laspy_*std_laspy_, 0, 0, 0,
+            		  0, 0, 1, 0, 0,
+            		  0, 0, 0, 1, 0,
+            		  0, 0, 0, 0, 1;
+  				 
   				
   				cout<<"Lidar initialization done"<<endl;
 			}
@@ -438,6 +464,15 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
 				
 				x_(0) = ro * cos(phi);
 				x_(1) = ro * sin(phi);
+				x_(2) = 4;
+  				x_(3) = ro_dot*cos(phi);
+  				x_(4) = ro_dot*sin(phi);
+  				
+  				P_ << std_radr_*std_radr_, 0, 0, 0, 0,
+            		   0, std_radr_*std_radr_, 0, 0, 0,
+            		   0, 0, 1, 0, 0,
+            		   0, 0, 0, std_radphi_*std_radphi_, 0,
+            	 	   0, 0, 0, 0, std_radphi_*std_radphi_;
 			}
 			cout<<"Initialization done"<<endl;
 			is_initialized_ = true;
@@ -445,7 +480,7 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
 			
 	}
 	//Prediction
-	float dt = (meas_package.timestamp_ - time_us_) / 1000000.0;
+	double dt = (meas_package.timestamp_ - time_us_) / 1000000.0;
 	time_us_ = meas_package.timestamp_;
 	
 	Prediction(dt);
